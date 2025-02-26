@@ -1,0 +1,13 @@
+# Dependency directories
+node_modules/
+dist/
+.terraform/
+
+# Sensitive data
+.env
+*.tfstate
+*.tfstate.backup
+
+# IDE specific
+.vscode/
+.idea/
