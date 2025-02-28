@@ -21,8 +21,27 @@ jobs:
 
       - name: Get Kubeconfig
         run: |
+          # SSM'den kubeconfig'i al ve decode et
           aws ssm get-parameter --name "/k3s/kubeconfig" --query Parameter.Value --output text | base64 --decode > kubeconfig.yaml
+
+      - name: Wait for Argo CD
+        run: |
+          # Argo CD'nin hazır olmasını bekle
+          kubectl wait --for=condition=available deployment/argocd-server -n argocd --timeout=300s --kubeconfig=kubeconfig.yaml
 
       - name: Deploy Argo CD App
         run: |
+          # Argo CD Application manifestini apply et
           kubectl apply -f kubernetes/argocd-app.yaml --kubeconfig=kubeconfig.yaml
+
+      - name: Sync Argo CD Application
+        run: |
+          # Argo CD API ile sync tetikle
+          ARGOCD_SERVER="argocd-server.argocd.svc.cluster.local"
+          ARGOCD_TOKEN="${{ secrets.ARGOCD_TOKEN }}"
+          
+          # Sync isteği gönder
+          curl -sS -k -X POST \
+            -H "Authorization: Bearer $ARGOCD_TOKEN" \
+            -H "Content-Type: application/json" \
+            "https://$ARGOCD_SERVER/api/v1/applications/weather-app/sync"
