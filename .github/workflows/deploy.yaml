@@ -1,4 +1,4 @@
-name: Argo CD Sync
+name: Deploy to Kubernetes
 on:
   push:
     branches: [main]
