@@ -39,17 +39,3 @@ spec:
             cpu: "500m"
       imagePullSecrets:
       - name: ecr-secret
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: weather-app-service
-spec:
-  type: NodePort  
-  selector:
-    app: weather-app
-  ports:
-    - protocol: TCP
-      port: 80
-      targetPort: 80
-      nodePort: 30000
