@@ -22,42 +22,29 @@ sudo kubectl create secret docker-registry ecr-secret \
   --docker-password=$ECR_TOKEN \
   --namespace=default
 
-# 4. Uygulamayı Deploy Et
-sudo kubectl apply -f - <<EOF
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: weather-app
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: weather-app
-  template:
-    metadata:
-      labels:
-        app: weather-app
-    spec:
-      containers:
-      - name: weather-app
-        image: 952128764978.dkr.ecr.us-east-1.amazonaws.com/weather-app:latest
-        ports:
-          - containerPort: 80
-      imagePullSecrets:
-      - name: ecr-secret
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: weather-app-service
-spec:
-  type: NodePort  
-  selector:
-    app: weather-app
-  ports:
-    - protocol: TCP
-      port: 80
-      targetPort: 80
-      nodePort: 30000
-EOF
 
+# EC2'a kubeconfig'i SSM'e kaydetmesi için komut ekleyin (user_data.sh)
+echo "${base64encode(file("/etc/rancher/k3s/k3s.yaml"))}" | aws ssm put-parameter --name "/k3s/kubeconfig" --type SecureString --value file:///dev/stdin --region us-east-1 --overwrite
+
+# Helm'i kur
+curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+chmod 700 get_helm.sh && ./get_helm.sh
+
+# Monitoring Namespace oluştur
+kubectl create namespace monitoring
+
+# Prometheus & Grafana'yı Helm ile kur
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo add grafana https://grafana.github.io/helm-charts
+helm repo update
+
+helm install prometheus prometheus-community/prometheus -n monitoring
+helm install grafana grafana/grafana -n monitoring
+
+# Argo CD'yi kur
+kubectl create namespace argocd
+kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+
+# Kubeconfig'i SSM'e kaydet (Terraform için)
+sudo apt-get install -y awscli
+aws ssm put-parameter --name "/k3s/kubeconfig" --type "SecureString" --value "$(sudo cat /etc/rancher/k3s/k3s.yaml | base64)" --region us-east-1 --overwrite

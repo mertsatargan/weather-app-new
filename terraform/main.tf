@@ -35,11 +35,7 @@ resource "aws_instance" "k3s_master" {
   vpc_security_group_ids = [aws_security_group.k3s_sg.id]
   iam_instance_profile   = aws_iam_instance_profile.ecr_profile.name
 
-  user_data = templatefile("user_data.sh", {
-    aws_region         = var.aws_region,
-    ecr_repository_url = aws_ecr_repository.weather_app.repository_url
-  })
-
+  user_data = file("${path.module}/user_data.sh")
 
   tags = {
     Name = "k3s-master"
@@ -73,6 +69,27 @@ resource "aws_security_group" "k3s_sg" {
   ingress {
     from_port   = 30000 # NodePort 
     to_port     = 30000
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 3000 # Grafana
+    to_port     = 3000
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 9090 # Prometheus
+    to_port     = 9090
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 8080 # Argo CD
+    to_port     = 8080
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
@@ -111,4 +128,23 @@ resource "aws_iam_role_policy_attachment" "ecr_policy" {
 resource "aws_iam_instance_profile" "ecr_profile" {
   name = "ecr-profile"
   role = aws_iam_role.ecr_access.name
+}
+
+# SSM icin IAM rolu
+
+resource "aws_iam_role_policy" "ssm_policy" {
+  name = "ssm-policy"
+  role = aws_iam_role.ecr_access.id
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Effect = "Allow",
+      Action = [
+        "ssm:PutParameter",
+        "ssm:GetParameter"
+      ],
+      Resource = "*"
+    }]
+  })
 }
