@@ -8,7 +8,7 @@ spec:
   source:
     repoURL: https://github.com/mertsatargan/weather-app-new.git
     targetRevision: main
-    path: kubernetes  # deployment.yaml ve service.yaml burada
+    path: kubernetes  # deployment.yaml ve service.yaml 
   destination:
     server: https://kubernetes.default.svc
     namespace: default

@@ -23,11 +23,14 @@ jobs:
         run: |
           # SSM'den kubeconfig'i al ve decode et
           aws ssm get-parameter --name "/k3s/kubeconfig" --query Parameter.Value --output text | base64 --decode > kubeconfig.yaml
+      - name: Validate Kubeconfig
+        run: |
+          cat kubeconfig.yaml | grep server
 
       - name: Wait for Argo CD
         run: |
-          # Argo CD'nin hazır olmasını bekle
-          kubectl wait --for=condition=available deployment/argocd-server -n argocd --timeout=300s --kubeconfig=kubeconfig.yaml
+          # Argo CD deployment'ının oluşmasını bekle
+          kubectl rollout status deployment/argocd-server -n argocd --timeout=300s --kubeconfig=kubeconfig.yaml
 
       - name: Deploy Argo CD App
         run: |
