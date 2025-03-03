@@ -1,50 +1,54 @@
-name: Deploy to Kubernetes
+name: Deploy Argo CD
 on:
   push:
     branches: [main]
     paths:
-      - 'kubernetes/**'
+      - 'kubernetes/argocd-app.yaml'  # Sadece bu dosya değiştiğinde tetikle
 
 jobs:
-  argocd-sync:
+  deploy-argocd:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Configure AWS
+      - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      - name: Get Kubeconfig
+      - name: Install kubectl
         run: |
-          # SSM'den kubeconfig'i al ve decode et
+          curl -LO "https://dl.k3s.io/release/$(curl -L -s https://dl.k3s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          chmod +x kubectl
+          sudo mv kubectl /usr/local/bin/
+
+      - name: Get Kubeconfig from SSM
+        run: |
           aws ssm get-parameter --name "/k3s/kubeconfig" --query Parameter.Value --output text | base64 --decode > kubeconfig.yaml
-      - name: Validate Kubeconfig
-        run: |
-          cat kubeconfig.yaml | grep server
+          cat kubeconfig.yaml  # Debug için
 
-      - name: Wait for Argo CD
+      - name: Deploy Argo CD
         run: |
-          # Argo CD deployment'ının oluşmasını bekle
-          kubectl rollout status deployment/argocd-server -n argocd --timeout=300s --kubeconfig=kubeconfig.yaml
+          # Argo CD'yi kur
+          kubectl create namespace argocd --kubeconfig=kubeconfig.yaml || true
+          kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml --kubeconfig=kubeconfig.yaml
 
-      - name: Deploy Argo CD App
+          # Argo CD'nin hazır olmasını bekle
+          kubectl wait --for=condition=available deployment/argocd-server -n argocd --timeout=600s --kubeconfig=kubeconfig.yaml
+
+      - name: Deploy Argo CD Application
         run: |
-          # Argo CD Application manifestini apply et
+          # Uygulama manifestini apply et
           kubectl apply -f kubernetes/argocd-app.yaml --kubeconfig=kubeconfig.yaml
 
-      - name: Sync Argo CD Application
-        run: |
-          # Argo CD API ile sync tetikle
+          # Sync tetikle
           ARGOCD_SERVER="argocd-server.argocd.svc.cluster.local"
           ARGOCD_TOKEN="${{ secrets.ARGOCD_TOKEN }}"
           
-          # Sync isteği gönder
           curl -sS -k -X POST \
             -H "Authorization: Bearer $ARGOCD_TOKEN" \
             -H "Content-Type: application/json" \
-            "https://$ARGOCD_SERVER/api/v1/applications/weather-app/sync"
+            "https://$ARGOCD_SERVER/api/v1/applications/weather-app/sync" --kubeconfig=kubeconfig.yaml
