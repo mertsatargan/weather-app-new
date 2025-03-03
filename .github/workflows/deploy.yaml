@@ -3,7 +3,8 @@ on:
   push:
     branches: [main]
     paths:
-      - 'kubernetes/argocd-app.yaml'  # Sadece bu dosya değiştiğinde tetikle
+      - 'kubernetes/argocd-app.yaml'
+      - 'kubernetes/argocd-install.yaml'  # Sadece bu dosya değiştiğinde tetikle
 
 jobs:
   deploy-argocd:
@@ -34,7 +35,7 @@ jobs:
         run: |
           # Argo CD'yi kur
           kubectl create namespace argocd --kubeconfig=kubeconfig.yaml || true
-          kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml --kubeconfig=kubeconfig.yaml
+          kubectl apply -n argocd -f kubernetes/argocd-install.yaml --kubeconfig=kubeconfig.yaml
 
           # Argo CD'nin hazır olmasını bekle
           kubectl wait --for=condition=available deployment/argocd-server -n argocd --timeout=600s --kubeconfig=kubeconfig.yaml
