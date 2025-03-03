@@ -19,12 +19,13 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
-
       - name: Install kubectl
         run: |
-          curl -LO "https://dl.k3s.io/release/$(curl -4 -L -s https://dl.k3s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          # Resmi Kubernetes deposunu kullan
+          curl -LO "https://dl.k8s.io/release/$(curl -4 -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
           chmod +x kubectl
           sudo mv kubectl /usr/local/bin/
+          kubectl version --client
 
       - name: Get Kubeconfig from SSM
         run: |

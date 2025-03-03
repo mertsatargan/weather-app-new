@@ -1,2 +1,2 @@
 mkdir -p kubernetes/argocd
-curl -sL https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml -o kubernetes/argocd-install.yaml # test comment ß
+curl -sL https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml -o kubernetes/argocd-install.yaml # test 
