@@ -32,15 +32,18 @@ jobs:
             # SSM'den veriyi al ve Python ile decode et
             RAW_CONFIG=$(aws ssm get-parameter --name "/k3s/kubeconfig" --query Parameter.Value --output text --region us-east-1)
             echo "$RAW_CONFIG" | base64 -d > kubeconfig.yaml
-        
-            # Hata ayıklama
-            echo "--- Kubeconfig İçeriği ---"
+            
+            # Hata ayıklama için içeriği göster
+            echo "Kubeconfig İçeriği:"
             cat kubeconfig.yaml
-            echo "--------------------------"
-        
+            
             # Validasyon
             if ! grep -q "server: https://" kubeconfig.yaml; then
-              echo "❌ HATA: Kubeconfig geçersiz!"
+              echo "❌ HATA: Kubeconfig'te server tanımlı değil!"
+              exit 1
+            fi
+            if ! grep -q "certificate-authority-data:" kubeconfig.yaml; then
+              echo "❌ HATA: Sertifika verisi eksik!"
               exit 1
             fi
 

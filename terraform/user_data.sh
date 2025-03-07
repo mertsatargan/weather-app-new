@@ -13,25 +13,31 @@ TOKEN=$(curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-meta
 PUBLIC_IP=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" -s http://169.254.169.254/latest/meta-data/public-ipv4)
 
 # K3s'i kur (tüm parametrelerle)
-curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--docker --tls-san $PUBLIC_IP --node-external-ip $PUBLIC_IP --bind-address 0.0.0.0 --advertise-address $PUBLIC_IP --write-kubeconfig-mode 644" sh -
-
-until [ -f /etc/rancher/k3s/k3s.yaml ]; do
-  sleep 5
+curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server \
+  --docker \
+  --tls-san $PUBLIC_IP \
+  --node-external-ip $PUBLIC_IP \
+  --bind-address 0.0.0.0 \
+  --advertise-address $PUBLIC_IP \
+  --write-kubeconfig-mode 644" sh -
+# Kubeconfig'in oluşmasını bekle (Kritik!)
+while [ ! -f /etc/rancher/k3s/k3s.yaml ]; do
   echo "Kubeconfig bekleniyor..."
+  sleep 10
 done
 
-
+# Server IP'yi değiştir
+sudo sed -i "s/0.0.0.0/$PUBLIC_IP/g" /etc/rancher/k3s/k3s.yaml
 sudo sed -i "s/127.0.0.1/$PUBLIC_IP/g" /etc/rancher/k3s/k3s.yaml
 
-
-# SSM'e kaydet (base64 -w0 ile)
-sudo cat /etc/rancher/k3s/k3s.yaml | base64 -w0 | aws ssm put-parameter \
-  --name "/k3s/kubeconfig" \
-  --type "SecureString" \
+# SSM'e kaydet (Python ile base64 encode)
+sudo bash -c "cat /etc/rancher/k3s/k3s.yaml | base64 -w0 | aws ssm put-parameter \
+  --name '/k3s/kubeconfig' \
+  --type 'SecureString' \
   --region us-east-1 \
   --value file:///dev/stdin \
-  --overwrite
-  
+  --overwrite"
+
 # 5. ECR Secret oluştur (Docker registry kimlik bilgileri)
 ECR_PASSWORD=$(aws ecr get-login-password --region "$AWS_REGION")
 sudo kubectl create secret docker-registry ecr-secret \
