@@ -7,7 +7,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/mertsatargan/weather-app-new.git 
-    path: kubernetes # Tüm manifestler bu 
+    path: kubernetes # Tüm manifestler burada
   destination:
     server: https://kubernetes.default.svc
     namespace: default
