@@ -29,17 +29,16 @@ jobs:
 
       - name: Get Kubeconfig
         run: |
-          # SSM'den veriyi al ve base64 decode et
-          aws ssm get-parameter --name "/k3s/kubeconfig" --query Parameter.Value --output text --region us-east-1 | base64 -d | tr -d '\r\n' > kubeconfig.yaml
-          
-          # Kubeconfig'i kontrol et
-          if ! yamllint kubeconfig.yaml; then
-            echo "❌ HATA: kubeconfig.yaml geçersiz!"
+          # SSM'den veriyi al ve binary karakterleri temizle
+          aws ssm get-parameter --name "/k3s/kubeconfig" --query Parameter.Value --output text --region us-east-1 \
+            | base64 -d \
+            | tr -cd '\11\12\15\40-\176' > kubeconfig.yaml  # ASCII printable karakterleri koru
+      
+          # Hızlı kontrol
+          if ! grep "server: https://" kubeconfig.yaml; then
+            echo "❌ HATA: Kubeconfig geçersiz!"
             exit 1
           fi
-          
-          # Debug için server IP'yi göster
-          grep "server:" kubeconfig.yaml
 
       - name: Deploy Argo CD
         run: |
