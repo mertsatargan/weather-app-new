@@ -36,6 +36,17 @@ resource "aws_instance" "k3s_master" {
   iam_instance_profile   = aws_iam_instance_profile.ecr_profile.name
 
   user_data = file("${path.module}/user_data.sh")
+  provisioner "remote-exec" {
+    inline = [
+      "until kubectl get nodes; do sleep 10; done"  # K3s API hazır olana kadar bekle
+    ]
+    connection {
+      type        = "ssh"
+      user        = "ubuntu"
+      private_key = file("~/.ssh/weather-app-key")
+      host        = self.public_ip
+    }
+  }
 
   tags = {
     Name = "k3s-master"
