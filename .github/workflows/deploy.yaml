@@ -27,10 +27,19 @@ jobs:
           sudo mv kubectl /usr/local/bin/
           kubectl version --client
 
-      - name: Get Kubeconfig from SSM
+      - name: Get Kubeconfig
         run: |
-          aws ssm get-parameter --name "/k3s/kubeconfig" --query Parameter.Value --output text | base64 --decode > kubeconfig.yaml
-          cat kubeconfig.yaml  # Debug için
+          # SSM'den veriyi al ve base64 decode et
+          aws ssm get-parameter --name "/k3s/kubeconfig" --query Parameter.Value --output text --region us-east-1 | base64 -d > kubeconfig.yaml
+          
+          # Hata kontrolü yap
+          if [ ! -s kubeconfig.yaml ]; then
+            echo "❌ HATA: kubeconfig.yaml boş veya geçersiz!"
+            exit 1
+          fi
+          
+          # Debug için ilk 10 satırı göster
+          head -n 10 kubeconfig.yaml
 
       - name: Deploy Argo CD
         run: |
