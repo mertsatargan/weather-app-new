@@ -30,7 +30,7 @@ jobs:
       - name: Get Kubeconfig
         run: |
             # SSM'den veriyi al ve Python ile decode et
-            $KUBECONFIG_CONTENT=$(aws ssm get-parameter --name "/k3s/kubeconfig" --query Parameter.Value --output text --region us-east-1)
+            KUBECONFIG_CONTENT=$(aws ssm get-parameter --name "/k3s/kubeconfig" --query Parameter.Value --output text --region us-east-1)
             echo -n "$KUBECONFIG_CONTENT" | base64 -d > kubeconfig.yaml
         
             # Validasyon
