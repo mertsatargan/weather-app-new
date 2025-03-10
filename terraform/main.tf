@@ -38,7 +38,7 @@ resource "aws_instance" "k3s_master" {
   user_data = file("${path.module}/user_data.sh")
   provisioner "remote-exec" {
     inline = [
-      "until kubectl get nodes; do sleep 10; done"  # K3s API hazır olana kadar bekle
+      "until kubectl get nodes; do sleep 10; done" # K3s API hazır olana kadar bekle
     ]
     connection {
       type        = "ssh"
