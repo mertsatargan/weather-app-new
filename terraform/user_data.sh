@@ -29,8 +29,11 @@ curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server \
   sudo sed -i "s/0.0.0.0/$PUBLIC_IP/g" /etc/rancher/k3s/k3s.yaml
   sudo sed -i "s/127.0.0.1/$PUBLIC_IP/g" /etc/rancher/k3s/k3s.yaml
 
-# SSM'e kaydet (Python ile base64 encode)
-  sudo bash -c "cat /etc/rancher/k3s/k3s.yaml | base64 -w0 | aws ssm put-parameter --name '/k3s/kubeconfig' --type 'SecureString' --region us-east-1 --value file:///dev/stdin --overwrite"
+  # Kubeconfig dosyasını base64 ile encode et
+  KUBECONFIG_CONTENT=$(cat /etc/rancher/k3s/k3s.yaml | base64 -w0)
+
+  # SSM Parameter Store’a doğru değeri gönder
+  aws ssm put-parameter --name '/k3s/kubeconfig' --type 'SecureString' --region us-east-1 --value "$KUBECONFIG_CONTENT" --overwrite
 
 
 # 5. ECR Secret oluştur (Docker registry kimlik bilgileri)
